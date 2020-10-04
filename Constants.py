@@ -4,6 +4,14 @@ SIGMOID = 0
 TANH = 1
 RELU = 2
 
+BIAS_RATE = .001
+LEARNING_RATE = .02
+TRAINING_ITERATIONS = 20
+
+INITIAL_WEIGHT_RANGE = .5
+INITIAL_BIAS_RANGE = .1
+
+
 def sigmoidTransformation(x):
     return (1 / (1 + math.exp(-x)))
 
@@ -12,7 +20,6 @@ def tanhTransformation(x):
 
 def reluTransformation(x):
     return max(0, x)
-
 
 def sigmoidDerivative(x):
     return x * (1 - x)

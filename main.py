@@ -1,7 +1,7 @@
-import NeuralNetwork
+import NeuralNet
 import Constants
 
 def Main():
-    NerualNetwork.NerualNetwork([2, 4, 2], Constants.TANH)
+    NeuralNet.NeuralNet([2, 2, 1], Constants.RELU)
 
 Main()
