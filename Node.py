@@ -12,10 +12,11 @@ class Node:
         self.index = index
         self.numInputs = numInputs
         self.inputWeights = self.initializeRandomWeights(self.numInputs)
-        self.inputBias = (random.random() * Constants.INITIAL_BIAS_RANGE)
+        # self.inputWeights = [1 for x in range(self.numInputs)]
+        self.inputBias = random.random() * Constants.INITIAL_BIAS_RANGE
         if self.layer == 0:
             self.inputWeights = [1]
-            self.inputBias = 0 
+            self.inputBias = 0
             self.calculateOutput = self.inputLayerOutput
 
     def initializeRandomWeights(self, numWeights):

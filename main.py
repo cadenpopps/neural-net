@@ -2,6 +2,6 @@ import NeuralNet
 import Constants
 
 def Main():
-    NeuralNet.NeuralNet([2, 2, 1], Constants.RELU)
+    NeuralNet.NeuralNet([1, 3, 3], Constants.RELU)
 
 Main()

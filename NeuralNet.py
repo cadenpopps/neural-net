@@ -1,5 +1,6 @@
 import Node
 import random
+import math
 import Constants
 
 class NeuralNet:
@@ -19,16 +20,19 @@ class NeuralNet:
         numSampleOutputs = self.shape[-1]
         elementsInSampleSet = 10
         for x in range(elementsInSampleSet):
+            rand = random.random()
             sampleOutputSet.append([])
-            for output in range(numSampleOutputs):
-                sampleOutputSet[x].append(x)
+            # for output in range(numSampleOutputs):
+            #     sampleOutputSet[x].append(rand * 5)
+            sampleOutputSet[x].append(rand * 5)
+            sampleOutputSet[x].append(rand * 10)
+            sampleOutputSet[x].append(rand * 50)
             sampleInputSet.append([])
             for feature in range(numSampleInputFeatures):
-                if (feature % 2 == 0):
-                    sampleInputSet[x].append(x - 1)
-                else:
-                    sampleInputSet[x].append(x + 1)
+                sampleInputSet[x].append(rand)
+                # sampleInputSet[x].append((x / elementsInSampleSet))
 
+        print(self)
         self.trainNeuralNetwork(sampleInputSet, sampleOutputSet, Constants.TRAINING_ITERATIONS)
         print(self)
 
@@ -46,54 +50,60 @@ class NeuralNet:
         for trainingIteration in range(iterations):
             print("\nIteration", trainingIteration, ":")
             for features, expectedOutputs in zip(inputSet, outputSet):
+                print("Input(s): " + str(features))
                 predictedOutputs = self.feedForward(features)
                 self.updateWeights(predictedOutputs, expectedOutputs, Constants.LEARNING_RATE)
-
 
     def updateWeights(self, predictedOutputs, expectedOutputs, learningRate):
         outputLayerDeltas = self.calculateOutputLayerDeltas(predictedOutputs[-1], expectedOutputs)
         weightedDeltas = self.backwardsPropogate(predictedOutputs, expectedOutputs, outputLayerDeltas)
-
         print("predicted output(s): " + str(predictedOutputs[-1]))
         print("expected output(s): " + str(expectedOutputs))
+        print("output layer error(s): " + str(outputLayerDeltas))
+        print("weighted deltas:" + str(weightedDeltas))
         print()
-        # print("output layer error(s): " + str(outputLayerDeltas))
 
-        for layer in self.nn[1:]:
+        for layer in self.nn[0:]:
             for node in layer:
                 self.updateNodeWeights(node, predictedOutputs, weightedDeltas, learningRate)
 
     def updateNodeWeights(self, node, predictedOutputs, weightedDeltas, learningRate):
         wd = weightedDeltas[node.layer][node.index]
         for weightIndex in range(len(node.inputWeights)):
-            po = predictedOutputs[node.layer - 1][weightIndex]
+            inp = predictedOutputs[node.layer - 1][weightIndex]
+            node.inputWeights[weightIndex] -= learningRate * wd * inp
+
             print("weighted delta: " + str(wd))
-            print("predicted output: " + str(po))
-            print("change in weight: " + str(learningRate * wd * po))
-            node.inputWeights[weightIndex] -= learningRate * wd * po
-        node.inputBias -= Constants.BIAS_RATE * weightedDeltas[node.layer][node.index]
+            print("predicted output: " + str(inp))
+            print("change in weight: " + str(learningRate * wd * inp))
+            print()
+
+        node.inputBias -= Constants.BIAS_RATE * wd
 
     def backwardsPropogate(self, predictedOutputs, expectedOutputs, outputLayerDeltas):
-        deltas = predictedOutputs.copy()
-        deltas[-1] = outputLayerDeltas
+        # deltas = [[] * len(predictedOutputs)]
+        deltas = []
+        for x in range(len(predictedOutputs)):
+            deltas.append([])
+        deltas[-1] = outputLayerDeltas.copy()
         for layerIndex in range(self.layers - 2, -1, -1):
             #loop nodes in current layer
             for currentNodeIndex in range(len(predictedOutputs[layerIndex])):
-                deriv = self.derivativeOfActivationFunction(predictedOutputs[layerIndex][currentNodeIndex])
                 sumOfWeightedDeltas = 0
                 #loop nodes in next layer
                 for nextLayerNodeIndex in range(len(deltas[layerIndex + 1])):
                     sumOfWeightedDeltas += deltas[layerIndex + 1][nextLayerNodeIndex] * self.nn[layerIndex + 1][nextLayerNodeIndex].inputWeights[currentNodeIndex]
-                deltas[layerIndex][currentNodeIndex] = (deriv * sumOfWeightedDeltas)
-
+                deriv = self.derivativeOfActivationFunction(predictedOutputs[layerIndex][currentNodeIndex])
+                deltas[layerIndex].append(deriv * sumOfWeightedDeltas)
         return deltas
 
     def calculateOutputLayerDeltas(self, predictedOutputs, expectedOutputs):
+        outputLayerErr = self.getMSE(predictedOutputs, expectedOutputs)
         outputLayerDeltas = []
         for predictedOutput, expectedOutput in zip(predictedOutputs, expectedOutputs):
             deriv = self.derivativeOfActivationFunction(predictedOutput)
-            err = self.getError(predictedOutput, expectedOutput)
-            outputLayerDeltas.append(deriv * err)
+            # err = self.getError(predictedOutput, expectedOutput)
+            outputLayerDeltas.append(deriv * outputLayerErr)
         return outputLayerDeltas
 
     def makePrediction(self, inputs):
@@ -114,8 +124,16 @@ class NeuralNet:
             outputs.append(node.calculateOutput(inp))
         return outputs
 
+    def getMSE(self, predictedValues, actualValues):
+        print(predictedValues)
+        print(actualValues)
+        err = 0
+        for predictedValue, actualValue in zip(predictedValues, actualValues):
+            err += math.pow(actualValue - predictedValue, 2)
+        return (err/2)
+
     def getError(self, predictedValue, actualValue):
-        return (actualValue - predictedValue)
+        return actualValue - predictedValue
 
     def __repr__(self):
         return self.__str__()
