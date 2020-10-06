@@ -14,27 +14,9 @@ class NeuralNet:
 
         self.nn = self.createNeuralNetwork(self.shape, self.function)
 
-        sampleInputSet = []
-        sampleOutputSet = []
-        numSampleInputFeatures = self.shape[0]
-        numSampleOutputs = self.shape[-1]
-        elementsInSampleSet = 10
-        for x in range(elementsInSampleSet):
-            rand = random.random()
-            sampleOutputSet.append([])
-            # for output in range(numSampleOutputs):
-            #     sampleOutputSet[x].append(rand * 5)
-            sampleOutputSet[x].append(rand * 5)
-            sampleOutputSet[x].append(rand * 10)
-            sampleOutputSet[x].append(rand * 50)
-            sampleInputSet.append([])
-            for feature in range(numSampleInputFeatures):
-                sampleInputSet[x].append(rand)
-                # sampleInputSet[x].append((x / elementsInSampleSet))
-
-        print(self)
-        self.trainNeuralNetwork(sampleInputSet, sampleOutputSet, Constants.TRAINING_ITERATIONS)
-        print(self)
+        # print(self)
+        # self.trainNeuralNetwork(sampleInputSet, sampleOutputSet, Constants.TRAINING_ITERATIONS)
+        # print(self)
 
     def createNeuralNetwork(self, shape, function):
         nn = []
@@ -46,24 +28,39 @@ class NeuralNet:
             numLayer += 1
         return nn
 
-    def trainNeuralNetwork(self, inputSet, outputSet, iterations):
-        for trainingIteration in range(iterations):
-            print("\nIteration", trainingIteration, ":")
-            for features, expectedOutputs in zip(inputSet, outputSet):
-                print("Input(s): " + str(features))
+    def trainNeuralNetwork(self, trainingSet):
+        trainingSet[1] = self.normalizeOutputs(trainingSet[1])
+        print(trainingSet[1])
+        for trainingIteration in range(Constants.TRAINING_ITERATIONS):
+            for features, expectedOutputs in zip(trainingSet[0], trainingSet[1]):
                 predictedOutputs = self.feedForward(features)
+                # print("Input(s): " + str(features))
+                if(trainingIteration > Constants.TRAINING_ITERATIONS - 2):
+                    print("\n\nIteration", trainingIteration, ":")
+                    print("predicted output(s): " + str(predictedOutputs[-1]))
+                    print("expected output(s): " + str(expectedOutputs))
                 self.updateWeights(predictedOutputs, expectedOutputs, Constants.LEARNING_RATE)
+        print(self)
+
+    def normalizeOutputs(self, outputs):
+        outputRange = 16
+        newOutputs = []
+        for outputSet in outputs:
+            newOutputs.append([])
+            for output in outputSet:
+                # newOutputs[-1].append(Constants.activationFunctions[self.function](output))
+                newOutputs[-1].append(output / outputRange)
+        return newOutputs
 
     def updateWeights(self, predictedOutputs, expectedOutputs, learningRate):
         outputLayerDeltas = self.calculateOutputLayerDeltas(predictedOutputs[-1], expectedOutputs)
         weightedDeltas = self.backwardsPropogate(predictedOutputs, expectedOutputs, outputLayerDeltas)
-        print("predicted output(s): " + str(predictedOutputs[-1]))
-        print("expected output(s): " + str(expectedOutputs))
-        print("output layer error(s): " + str(outputLayerDeltas))
-        print("weighted deltas:" + str(weightedDeltas))
-        print()
 
-        for layer in self.nn[0:]:
+        # print("output layer error(s): " + str(outputLayerDeltas))
+        # print("weighted deltas:" + str(weightedDeltas))
+        # print()
+
+        for layer in self.nn:
             for node in layer:
                 self.updateNodeWeights(node, predictedOutputs, weightedDeltas, learningRate)
 
@@ -71,14 +68,13 @@ class NeuralNet:
         wd = weightedDeltas[node.layer][node.index]
         for weightIndex in range(len(node.inputWeights)):
             inp = predictedOutputs[node.layer - 1][weightIndex]
-            node.inputWeights[weightIndex] -= learningRate * wd * inp
+            node.inputWeights[weightIndex] += learningRate * wd * inp
+            # print("weighted delta: " + str(wd))
+            # print("predicted output: " + str(inp))
+            # print("change in weight: " + str(learningRate * wd * inp))
+            # print()
 
-            print("weighted delta: " + str(wd))
-            print("predicted output: " + str(inp))
-            print("change in weight: " + str(learningRate * wd * inp))
-            print()
-
-        node.inputBias -= Constants.BIAS_RATE * wd
+        node.inputBias += Constants.BIAS_RATE * wd
 
     def backwardsPropogate(self, predictedOutputs, expectedOutputs, outputLayerDeltas):
         # deltas = [[] * len(predictedOutputs)]
@@ -98,12 +94,12 @@ class NeuralNet:
         return deltas
 
     def calculateOutputLayerDeltas(self, predictedOutputs, expectedOutputs):
-        outputLayerErr = self.getMSE(predictedOutputs, expectedOutputs)
+        # outputLayerErr = self.getMSE(predictedOutputs, expectedOutputs)
         outputLayerDeltas = []
         for predictedOutput, expectedOutput in zip(predictedOutputs, expectedOutputs):
             deriv = self.derivativeOfActivationFunction(predictedOutput)
-            # err = self.getError(predictedOutput, expectedOutput)
-            outputLayerDeltas.append(deriv * outputLayerErr)
+            err = self.getError(predictedOutput, expectedOutput)
+            outputLayerDeltas.append(deriv * err)
         return outputLayerDeltas
 
     def makePrediction(self, inputs):
@@ -125,11 +121,10 @@ class NeuralNet:
         return outputs
 
     def getMSE(self, predictedValues, actualValues):
-        print(predictedValues)
-        print(actualValues)
         err = 0
         for predictedValue, actualValue in zip(predictedValues, actualValues):
-            err += math.pow(actualValue - predictedValue, 2)
+            av = Constants.activationFunctions[self.function](actualValue)
+            err += math.pow(av - predictedValue, 2)
         return (err/2)
 
     def getError(self, predictedValue, actualValue):
